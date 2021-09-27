@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 
-const { v4: uuidv4, validate } = require('uuid');
+const { v4: uuidv4, validate, v4 } = require('uuid');
 
 const app = express();
 app.use(express.json());
@@ -11,18 +11,63 @@ const users = [];
 
 function checksExistsUserAccount(request, response, next) {
   // Complete aqui
+  const {username} = request.headers
+  const user = users.find(user => user.username === username)
+  if(!user){
+    return response.status(404).json()
+  }
+  request.user = user
+  next()
 }
 
 function checksCreateTodosUserAvailability(request, response, next) {
   // Complete aqui
+  const {user} = request
+  if((!user.pro) && user.todos.length >= 10){
+    return response.status(403).json()
+  }
+  next()
+
 }
 
 function checksTodoExists(request, response, next) {
   // Complete aqui
+  const {username} = request.headers
+  const {id} = request.params
+  const user = users.find(user => user.username === username)
+  
+  
+  if(!user){
+    return response.status(404).json()
+  }
+
+  if(!validate(id)){
+    return response.status(400).json()
+  }
+
+  const todo= user.todos.find(todo => todo.id === id)
+
+  if(!todo){
+    return response.status(404).json({error: 404})
+  }
+
+  
+  //const todo = user.todos.find(todo => todo.id === id)
+  request.user = user
+  request.todo = todo
+  next()
 }
 
 function findUserById(request, response, next) {
   // Complete aqui
+  const {id} = request.params
+  const userIndex = users.findIndex(user => user.id === id)
+  if(userIndex === -1){
+    return response.status(404).json()
+  }
+  const user = users.find(user => user.id === id)
+  request.user = user
+  next()
 }
 
 app.post('/users', (request, response) => {
@@ -91,7 +136,6 @@ app.post('/todos', checksExistsUserAccount, checksCreateTodosUserAvailability, (
 app.put('/todos/:id', checksTodoExists, (request, response) => {
   const { title, deadline } = request.body;
   const { todo } = request;
-
   todo.title = title;
   todo.deadline = new Date(deadline);
 
